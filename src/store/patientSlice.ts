@@ -1,8 +1,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { FhirPatient } from '@/shared/patient-interface';
+import { PatientResource } from '@/shared/patient-interface';
+import { FhirItem } from '@/shared/shared-interface';
 
 interface PatientState {
-    data: FhirPatient | null;
+    data: FhirItem<PatientResource> | null;
     loading: boolean;
     error: string | null;
     searchParams: {

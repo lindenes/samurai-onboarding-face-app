@@ -18,13 +18,18 @@ import {
 import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/store';
 import { fetchPatients, setSearchField, setSearchTerm } from '@/store/patientSlice';
-import { FhirPatient } from '../shared/patient-interface';
+import { fetchObservation } from '@/store/observationSlice';
 
 export default function Home() {
   const dispatch = useAppDispatch();
-  const { data: patients, loading, error, searchParams } = useAppSelector(
-      (state) => state.patients
-  );
+  const {
+    data: patients,
+    loading,
+    error,
+    searchParams
+  } = useAppSelector((state) => state.patients);
+
+  const observations = useAppSelector((state) => state.observations.data);
 
   const handleSearch = () => {
     dispatch(fetchPatients({
@@ -36,6 +41,15 @@ export default function Home() {
   useEffect(() => {
     dispatch(fetchPatients());
   }, [dispatch]);
+
+  // Загружаем обследования для каждого пациента
+  useEffect(() => {
+    if (patients?.entry) {
+      patients.entry.forEach(patient => {
+        dispatch(fetchObservation({ patientID: patient.resource.id }));
+      });
+    }
+  }, [patients, dispatch]);
 
   return (
       <Container maxWidth="lg">
@@ -99,16 +113,45 @@ export default function Home() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {patients?.entry?.map((patient) => (
-                        <TableRow key={patient.resource.id}>
-                          <TableCell component="th" scope="row">
-                            {patient.resource.name[0].family}
-                          </TableCell>
-                          <TableCell align="right">{patient.resource.name[0].given.join(", ")}</TableCell>
-                          <TableCell align="right">{patient.resource.birthDate}</TableCell>
-                          <TableCell align="right">{patient.resource.telecom?.[0]?.value}</TableCell>
-                        </TableRow>
-                    ))}
+                    {patients?.entry?.map((patient) => {
+                      const patientObservations = observations?.entry?.filter(
+                          obs => obs.resource.subject?.reference === `Patient/${patient.resource.id}`
+                      );
+                      const height =
+                          patientObservations?.filter((item) => {
+                            return item.resource.code.coding[0].code === "8302-2"
+                          })
+                              .sort(
+                                  (item1, item2) => {
+                                    const firstDate = new Date(item1.resource.issued)
+                                    const secondDate = new Date(item2.resource.issued)
+                                    return secondDate.getTime() - firstDate.getTime()
+                                  }
+                              )[0]?.resource.valueQuantity.value
+                      const weight =
+                          patientObservations?.filter((item) => {
+                            return item.resource.code.coding[0].code === "29463-7"
+                          })
+                              .sort(
+                                  (item1, item2) => {
+                                    const firstDate = new Date(item1.resource.issued)
+                                    const secondDate = new Date(item2.resource.issued)
+                                    return secondDate.getTime() - firstDate.getTime()
+                                  }
+                              )[0]?.resource.valueQuantity.value
+                      return (
+                          <TableRow key={patient.resource.id}>
+                            <TableCell component="th" scope="row">
+                              {patient.resource.name[0].family}
+                            </TableCell>
+                            <TableCell align="right">{patient.resource.name[0].given.join(", ")}</TableCell>
+                            <TableCell align="right">{patient.resource.birthDate}</TableCell>
+                            <TableCell align="right">{patient.resource.telecom?.[0]?.value}</TableCell>
+                            <TableCell align="right">{weight}</TableCell>
+                            <TableCell align="right">{height}</TableCell>
+                          </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import {FhirPatient} from '@/shared/patient-interface'
+import {PatientResource} from '@/shared/patient-interface'
+import {FhirItem} from "@/shared/shared-interface";
 
 export async function GET(request: Request) {
     const apiUrl = process.env.AIDBOX_URL!;
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
                 Authorization: apiKey
             }
         });
-        const patients:FhirPatient = await response.json()
+        const patients:FhirItem<PatientResource> = await response.json()
         return NextResponse.json(patients)
     }else{
         const response = await fetch(`${apiUrl}/fhir/Patient`, {
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
                 Authorization: apiKey
             }
         });
-        const patients:FhirPatient = await response.json()
+        const patients:FhirItem<PatientResource> = await response.json()
         console.log(patients)
         return NextResponse.json(patients)
     }
