@@ -1,95 +1,123 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client';
+import {
+  Container,
+  Typography,
+  Button,
+  Box,
+  Stack,
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  CircularProgress
+} from "@mui/material";
+import { useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store/store';
+import { fetchPatients, setSearchField, setSearchTerm } from '@/store/patientSlice';
+import { FhirPatient } from '../shared/patient-interface';
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const dispatch = useAppDispatch();
+  const { data: patients, loading, error, searchParams } = useAppSelector(
+      (state) => state.patients
+  );
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  const handleSearch = () => {
+    dispatch(fetchPatients({
+      field: searchParams.field,
+      term: searchParams.term
+    }));
+  };
+
+  useEffect(() => {
+    dispatch(fetchPatients());
+  }, [dispatch]);
+
+  return (
+      <Container maxWidth="lg">
+        <Box component="main" sx={{ py: 4 }}>
+          <Typography variant="h4" gutterBottom>Пациенты</Typography>
+
+          <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+            <TextField
+                select
+                label="Поле поиска"
+                value={searchParams.field}
+                onChange={(e) => dispatch(setSearchField(e.target.value))}
+                slotProps={{ select: { native: true } }}
+                sx={{ minWidth: 150 }}
+            >
+              <option value="name">Имя</option>
+              <option value="age">Возраст</option>
+              <option value="phone">Телефон</option>
+              <option value="weight">Вес</option>
+              <option value="height">Рост</option>
+              <option value="diagnosis">Диагноз</option>
+            </TextField>
+
+            <TextField
+                label="Поиск"
+                variant="outlined"
+                fullWidth
+                value={searchParams.term}
+                onChange={(e) => dispatch(setSearchTerm(e.target.value))}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+            <Button
+                variant="contained"
+                onClick={handleSearch}
+                disabled={loading}
+            >
+              Найти
+            </Button>
+          </Box>
+
+          {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                <CircularProgress />
+              </Box>
+          ) : error ? (
+              <Typography color="error">{error}</Typography>
+          ) : (
+              <TableContainer component={Paper}>
+                <Table sx={{ minWidth: 650 }} aria-label="Таблица пациентов">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Фамилия</TableCell>
+                      <TableCell>Имя</TableCell>
+                      <TableCell align="right">Дата рождения</TableCell>
+                      <TableCell align="right">Телефон</TableCell>
+                      <TableCell align="right">Вес (кг)</TableCell>
+                      <TableCell align="right">Рост (см)</TableCell>
+                      <TableCell align="right">Пол</TableCell>
+                      <TableCell>Диагноз</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {patients?.entry?.map((patient) => (
+                        <TableRow key={patient.resource.id}>
+                          <TableCell component="th" scope="row">
+                            {patient.resource.name[0].family}
+                          </TableCell>
+                          <TableCell align="right">{patient.resource.name[0].given.join(", ")}</TableCell>
+                          <TableCell align="right">{patient.resource.birthDate}</TableCell>
+                          <TableCell align="right">{patient.resource.telecom?.[0]?.value}</TableCell>
+                        </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+          )}
+
+          {patients?.total === 0 && !loading && (
+              <Typography sx={{ mt: 2 }}>Пациенты не найдены</Typography>
+          )}
+        </Box>
+      </Container>
   );
 }
