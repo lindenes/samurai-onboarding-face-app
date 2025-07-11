@@ -3,6 +3,7 @@ interface Address{
     line:Array<string>
     state:string
     country:string
+    postalCode:string
 }
 interface Name{
     use:string
@@ -15,6 +16,14 @@ interface Telecom{
     value:String
     system:String
 }
+interface IdentifierType{
+    text:string
+}
+interface Identifier{
+    value:string
+    system:string
+    type:IdentifierType
+}
 export interface PatientResource{
     multipleBirthBoolean:boolean
     address:Array<Address>
@@ -23,4 +32,5 @@ export interface PatientResource{
     birthDate:string
     gender:String
     telecom:Array<Telecom>
+    identifier:Array<Identifier>
 }

@@ -41,4 +41,6 @@ export interface ObservationResource{
     subject:Subject
     issued:string
     code:Code
+    valueString:string
+    valueCodeableConcept:Code
 }
