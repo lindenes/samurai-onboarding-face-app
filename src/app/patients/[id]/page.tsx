@@ -22,16 +22,22 @@ import {
     TablePagination,
     Avatar
 } from "@mui/material";
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/store';
 import { Email, Phone, Home, Person, Cake, Transgender, Badge } from '@mui/icons-material';
 import {FhirItem} from "@/shared/shared-interface";
 import {ObservationResource} from "@/shared/observation-interface";
+import {ConditionResource} from "@/shared/condition-interface";
+import {fetchConditions} from "@/store/conditionSlice";
 
 export default function PatientPage({ params }: { params: Promise<{ id: string }> })  {
     const router = useRouter();
     const dispatch = useAppDispatch();
     const patientId = React.use(params);
+
+    useEffect(() => {
+        dispatch(fetchConditions({ patientID: patientId.id}));
+    }, [dispatch, patientId.id]);
 
     const patient = useAppSelector((state) =>
         state.patients.data?.entry?.find(p => p.resource.id === patientId.id)?.resource
@@ -39,8 +45,11 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [conditionsPage, setConditionsPage] = useState(0);
+    const [conditionsRowsPerPage, setConditionsRowsPerPage] = useState(5);
 
     const observations = useAppSelector((state) => state.observations.data);
+    const conditions = useAppSelector((state) => state.conditions.data);
 
     if (!patient) {
         return (
@@ -60,6 +69,10 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
     const patientObservations = observations?.entry?.filter(
         (obs) =>
             obs.resource.subject?.reference === `Patient/${patient?.id}`
+    ) || [];
+
+    const patientConditions = conditions?.entry?.filter(
+        (cond) => cond.resource.subject?.reference === `Patient/${patient?.id}`
     ) || [];
 
     const handleChangePage = (event: unknown, newPage: number) => {
@@ -86,7 +99,7 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
         return(
             <TableRow key={index}>
                 <TableCell>
-                    {resource.code?.text || 'Observation'}
+                    {resource.code?.text}
                 </TableCell>
                 <TableCell>
                     {value}
@@ -97,6 +110,37 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
             </TableRow>
         )
     }
+
+    const handleConditionsPageChange = (event: unknown, newPage: number) => {
+        setConditionsPage(newPage);
+    };
+
+    const handleConditionsRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setConditionsRowsPerPage(parseInt(event.target.value, 10));
+        setConditionsPage(0);
+    };
+
+    const currentConditions = patientConditions.slice(
+        conditionsPage * conditionsRowsPerPage,
+        conditionsPage * conditionsRowsPerPage + conditionsRowsPerPage
+    );
+
+    const renderedConditionRows = (index: number, resource: ConditionResource) => {
+        console.log(resource)
+        return (
+            <TableRow key={`condition-${index}`}>
+                <TableCell>
+                    {resource.clinicalStatus.coding[0].code}
+                </TableCell>
+                <TableCell>
+                    {resource.code.text}
+                </TableCell>
+                <TableCell>
+                    {resource.recordedDate}
+                </TableCell>
+            </TableRow>
+        );
+    };
 
     return (
         <Container maxWidth="xl">
@@ -220,6 +264,46 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                                 labelRowsPerPage="rows:"
                                                 labelDisplayedRows={({ from, to, count }) =>
                                                     `${from}-${to} from ${count}`
+                                                }
+                                            />
+                                        </TableRow>
+                                    </TableFooter>
+                                </Table>
+                            </TableContainer>
+                        </Paper>
+                        <Paper sx={{ p: 2, mb: 3 }}>
+                            <Typography variant="h6" gutterBottom>Conditions</Typography>
+                            <TableContainer>
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell>Status</TableCell>
+                                            <TableCell>Diagnosis</TableCell>
+                                            <TableCell>Recorded Date</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {currentConditions.map((cond, index) =>
+                                            renderedConditionRows(index, cond.resource)
+                                        )}
+                                        {patientConditions.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={4}>No conditions found</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                    <TableFooter>
+                                        <TableRow>
+                                            <TablePagination
+                                                rowsPerPageOptions={[5, 10, 25]}
+                                                count={patientConditions.length}
+                                                rowsPerPage={conditionsRowsPerPage}
+                                                page={conditionsPage}
+                                                onPageChange={handleConditionsPageChange}
+                                                onRowsPerPageChange={handleConditionsRowsPerPageChange}
+                                                labelRowsPerPage="Rows:"
+                                                labelDisplayedRows={({ from, to, count }) =>
+                                                    `${from}-${to} of ${count}`
                                                 }
                                             />
                                         </TableRow>

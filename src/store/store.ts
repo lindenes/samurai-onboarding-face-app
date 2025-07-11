@@ -3,11 +3,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { TypedUseSelectorHook } from 'react-redux';
 import patientReducer from './patientSlice';
 import observationReducer from './observationSlice'
+import conditionReducer from './conditionSlice'
 
 export const store = configureStore({
     reducer: {
         patients: patientReducer,
-        observations:observationReducer
+        observations:observationReducer,
+        conditions:conditionReducer
     },
 });
 

@@ -1,5 +1,5 @@
 import {FhirItem} from "@/shared/shared-interface";
-import {ObservationResource} from "@/shared/observation-interface";
+import {ConditionResource} from "@/shared/condition-interface";
 import {NextResponse} from "next/server";
 
 export async function GET(request: Request) {
@@ -8,20 +8,20 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const patient = searchParams.get('patient');
     if(patient){
-        const response = await fetch(`${apiUrl}/fhir/Observation?patient=${patient}`, {
+        const response = await fetch(`${apiUrl}/fhir/Condition?patient=${patient}`, {
             headers: {
                 Authorization: apiKey
             }
         });
-        const observations:FhirItem<ObservationResource> = await response.json()
+        const observations:FhirItem<ConditionResource> = await response.json()
         return NextResponse.json(observations)
     }else{
-        const response = await fetch(`${apiUrl}/fhir/Observation`, {
+        const response = await fetch(`${apiUrl}/fhir/Condition`, {
             headers: {
                 Authorization: apiKey
             }
         });
-        const observations:FhirItem<ObservationResource> = await response.json()
+        const observations:FhirItem<ConditionResource> = await response.json()
         return NextResponse.json(observations)
     }
 }
