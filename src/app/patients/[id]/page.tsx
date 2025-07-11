@@ -154,7 +154,7 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                 </Button>
 
                 <Grid container spacing={3}>
-                    <Grid item xs={12} md={4}>
+                    <Grid>
                         <Paper sx={{ p: 2, height: '100%' }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
                                 <Avatar sx={{ width: 80, height: 80, mb: 2 }}>
@@ -232,7 +232,7 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                         </Paper>
                     </Grid>
 
-                    <Grid item xs={12} md={8}>
+                    <Grid>
                         <Paper sx={{ p: 2, mb: 3 }}>
                             <Typography variant="h6" gutterBottom>Observations</Typography>
                             <TableContainer>
