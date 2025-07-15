@@ -29,6 +29,8 @@ import {FhirItem} from "@/shared/shared-interface";
 import {ObservationResource} from "@/shared/observation-interface";
 import {ConditionResource} from "@/shared/condition-interface";
 import {fetchConditions} from "@/store/conditionSlice";
+import {fetchEncounter} from "@/store/encounterSlice";
+import {EncounterResource} from "@/shared/encounter-interface";
 
 export default function PatientPage({ params }: { params: Promise<{ id: string }> })  {
     const router = useRouter();
@@ -36,7 +38,8 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
     const patientId = React.use(params);
 
     useEffect(() => {
-        dispatch(fetchConditions({ patientID: patientId.id}));
+        dispatch(fetchConditions({ patientID: patientId.id}))
+        dispatch(fetchEncounter({patientID: patientId.id}))
     }, [dispatch, patientId.id]);
 
     const patient = useAppSelector((state) =>
@@ -47,9 +50,12 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const [conditionsPage, setConditionsPage] = useState(0);
     const [conditionsRowsPerPage, setConditionsRowsPerPage] = useState(5);
+    const [encountersPage, setEncountersPage] = useState(0);
+    const [encountersRowsPerPage, setEncountersRowsPerPage] = useState(5);
 
     const observations = useAppSelector((state) => state.observations.data);
     const conditions = useAppSelector((state) => state.conditions.data);
+    const encounters = useAppSelector((state) => state.encounters.data);
 
     if (!patient) {
         return (
@@ -72,6 +78,10 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
     ) || [];
 
     const patientConditions = conditions?.entry?.filter(
+        (cond) => cond.resource.subject?.reference === `Patient/${patient?.id}`
+    ) || [];
+
+    const patientEncounters = encounters?.entry?.filter(
         (cond) => cond.resource.subject?.reference === `Patient/${patient?.id}`
     ) || [];
 
@@ -120,9 +130,23 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
         setConditionsPage(0);
     };
 
+    const handleEncountersPageChange = (event: unknown, newPage: number) => {
+        setEncountersPage(newPage);
+    };
+
+    const handleEncountersRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setEncountersRowsPerPage(parseInt(event.target.value, 10));
+        setEncountersPage(0);
+    };
+
     const currentConditions = patientConditions.slice(
         conditionsPage * conditionsRowsPerPage,
         conditionsPage * conditionsRowsPerPage + conditionsRowsPerPage
+    );
+
+    const currentEncounters = patientEncounters.slice(
+        encountersPage * encountersRowsPerPage,
+        encountersPage * encountersRowsPerPage + encountersRowsPerPage
     );
 
     const renderedConditionRows = (index: number, resource: ConditionResource) => {
@@ -136,6 +160,25 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                 </TableCell>
                 <TableCell>
                     {resource.recordedDate}
+                </TableCell>
+            </TableRow>
+        );
+    };
+
+    const renderedEncounterRows = (index: number, resource: EncounterResource) => {
+        return (
+            <TableRow key={`condition-${index}`}>
+                <TableCell>
+                    {resource.class.code}
+                </TableCell>
+                <TableCell>
+                    {resource.status}
+                </TableCell>
+                <TableCell>
+                    {resource.serviceProvider.display}
+                </TableCell>
+                <TableCell>
+                    {resource.period.start + " - " + resource.period.end}
                 </TableCell>
             </TableRow>
         );
@@ -303,6 +346,47 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                                 page={conditionsPage}
                                                 onPageChange={handleConditionsPageChange}
                                                 onRowsPerPageChange={handleConditionsRowsPerPageChange}
+                                                labelRowsPerPage="Rows:"
+                                                labelDisplayedRows={({ from, to, count }) =>
+                                                    `${from}-${to} of ${count}`
+                                                }
+                                            />
+                                        </TableRow>
+                                    </TableFooter>
+                                </Table>
+                            </TableContainer>
+                        </Paper>
+                        <Paper sx={{ p: 2, mb: 3 }}>
+                            <Typography variant="h6" gutterBottom>Encounters</Typography>
+                            <TableContainer>
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell>Type</TableCell>
+                                            <TableCell>Status</TableCell>
+                                            <TableCell>Organization</TableCell>
+                                            <TableCell>Period</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {currentEncounters.map((cond, index) =>
+                                            renderedEncounterRows(index, cond.resource)
+                                        )}
+                                        {patientEncounters.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={4}>No conditions found</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                    <TableFooter>
+                                        <TableRow>
+                                            <TablePagination
+                                                rowsPerPageOptions={[5, 10, 25]}
+                                                count={patientEncounters.length}
+                                                rowsPerPage={encountersRowsPerPage}
+                                                page={encountersPage}
+                                                onPageChange={handleEncountersPageChange}
+                                                onRowsPerPageChange={handleEncountersRowsPerPageChange}
                                                 labelRowsPerPage="Rows:"
                                                 labelDisplayedRows={({ from, to, count }) =>
                                                     `${from}-${to} of ${count}`

@@ -4,12 +4,14 @@ import type { TypedUseSelectorHook } from 'react-redux';
 import patientReducer from './patientSlice';
 import observationReducer from './observationSlice'
 import conditionReducer from './conditionSlice'
+import encounterReducer from './encounterSlice'
 
 export const store = configureStore({
     reducer: {
         patients: patientReducer,
         observations:observationReducer,
-        conditions:conditionReducer
+        conditions:conditionReducer,
+        encounters:encounterReducer
     },
 });
 

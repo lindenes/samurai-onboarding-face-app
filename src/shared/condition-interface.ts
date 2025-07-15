@@ -1,8 +1,5 @@
-import {Category, Encounter, Link, Meta, Subject} from "@/shared/shared-interface";
+import {Category, Encounter, Link, Meta, SearchMode, Subject} from "@/shared/shared-interface";
 
-interface SearchMode{
-    mode:string
-}
 interface Coding{
     code:string
     system:string

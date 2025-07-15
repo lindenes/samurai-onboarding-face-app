@@ -54,4 +54,12 @@ export interface Code{
 }
 export interface Subject{
     reference:string
+    display: string | undefined
+}
+export interface IdentifierType{
+    text:string
+    coding:Array<Coding> | undefined
+}
+export interface SearchMode{
+    mode:string
 }

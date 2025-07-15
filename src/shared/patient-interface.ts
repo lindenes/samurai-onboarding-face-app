@@ -1,3 +1,5 @@
+import {IdentifierType} from "@/shared/shared-interface";
+
 interface Address{
     city:string
     line:Array<string>
@@ -15,9 +17,6 @@ interface Telecom{
     use:String
     value:String
     system:String
-}
-interface IdentifierType{
-    text:string
 }
 interface Identifier{
     value:string
