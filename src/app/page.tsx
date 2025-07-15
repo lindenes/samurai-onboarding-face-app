@@ -124,22 +124,22 @@ export default function Home() {
   return (
       <Container maxWidth="lg">
         <Box component="main" sx={{ py: 4 }}>
-          <Typography variant="h4" gutterBottom>Пациенты</Typography>
+          <Typography variant="h4" gutterBottom>Patients</Typography>
 
           <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
             <TextField
                 select
-                label="Поле поиска"
+                label="Search feield"
                 value={searchParams.field}
                 onChange={(e) => dispatch(setSearchField(e.target.value))}
                 slotProps={{ select:{native: true }}}
                 sx={{ minWidth: 150 }}
             >
-              <option value="name">Имя</option>
-              <option value="age">Возраст</option>
-              <option value="phone">Телефон</option>
-              <option value="weight">Вес</option>
-              <option value="height">Рост</option>
+              <option value="name">Name</option>
+              <option value="birthdate">Birthdate</option>
+              <option value="telecom">Telephone</option>
+              <option value="weight">Weight</option>
+              <option value="height">Height</option>
             </TextField>
 
             <TextField
@@ -156,7 +156,7 @@ export default function Home() {
                 onClick={handleSearch}
                 disabled={isPatientsLoading}
             >
-              Найти
+              Find
             </Button>
           </Box>
 
@@ -171,13 +171,13 @@ export default function Home() {
                 <Table sx={{ minWidth: 650 }} aria-label="Таблица пациентов">
                   <TableHead>
                     <TableRow>
-                      <TableCell>Фамилия</TableCell>
-                      <TableCell>Имя</TableCell>
-                      <TableCell align="right">Дата рождения</TableCell>
-                      <TableCell align="right">Телефон</TableCell>
-                      <TableCell align="right">Вес (кг)</TableCell>
-                      <TableCell align="right">Рост (см)</TableCell>
-                      <TableCell align="right">Пол</TableCell>
+                      <TableCell>Surname</TableCell>
+                      <TableCell>Name</TableCell>
+                      <TableCell align="right">Birthdate</TableCell>
+                      <TableCell align="right">Telephone</TableCell>
+                      <TableCell align="right">Weight (kg)</TableCell>
+                      <TableCell align="right">Height (sm)</TableCell>
+                      <TableCell align="right">Gender</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -190,14 +190,14 @@ export default function Home() {
                       <TablePagination
                           rowsPerPageOptions={[5, 10, 25]}
                           colSpan={7}
-                          count={patients?.total || 0}
+                          count={patients?.entry.length || 0}
                           rowsPerPage={rowsPerPage}
                           page={page}
                           onPageChange={handleChangePage}
                           onRowsPerPageChange={handleChangeRowsPerPage}
-                          labelRowsPerPage="Строк на странице:"
+                          labelRowsPerPage="Rows on page:"
                           labelDisplayedRows={({ from, to, count }) =>
-                              `${from}-${to} из ${count !== -1 ? count : `больше чем ${to}`}`
+                              `${from}-${to} from ${count !== -1 ? count : `больше чем ${to}`}`
                           }
                       />
                     </TableRow>
@@ -207,7 +207,7 @@ export default function Home() {
           )}
 
           {patients?.total === 0 && !isPatientsLoading && (
-              <Typography sx={{ mt: 2 }}>Пациенты не найдены</Typography>
+              <Typography sx={{ mt: 2 }}>Patients not found</Typography>
           )}
         </Box>
       </Container>

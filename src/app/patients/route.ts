@@ -9,13 +9,61 @@ export async function GET(request: Request) {
     const field = searchParams.get('field');
     const term = searchParams.get('term');
     if(field){
-        const response = await fetch(`${apiUrl}/fhir/Patient?${field}=${term}`, {
-            headers: {
-                Authorization: apiKey
-            }
-        });
-        const patients:FhirItem<PatientResource> = await response.json()
-        return NextResponse.json(patients)
+        if(field === "weight"){
+            const response = await fetch(`${apiUrl}/fhir/Observation?code=29463-7&value-quantity=${term}&_include=Observation:patient`, {
+                headers: {
+                    Authorization: apiKey
+                }
+            });
+            const originalBundle = await response.json();
+
+            const filteredEntry = originalBundle.entry?.filter((entry: any) =>
+                entry.resource?.resourceType === "Patient"
+            ) || [];
+
+            const patientBundle = {
+                resourceType: "Bundle",
+                type: "searchset",
+                total: filteredEntry.length,
+                entry: filteredEntry,
+                meta: originalBundle.meta,
+                link: originalBundle.link
+            };
+
+            return NextResponse.json(patientBundle);
+        }
+        else if(field === "height"){
+            const response = await fetch(`${apiUrl}/fhir/Observation?code=8302-2&value-quantity=${term}&_include=Observation:patient`, {
+                headers: {
+                    Authorization: apiKey
+                }
+            });
+            const originalBundle = await response.json();
+
+            const filteredEntry = originalBundle.entry?.filter((entry: any) =>
+                entry.resource?.resourceType === "Patient"
+            ) || [];
+
+            const patientBundle = {
+                resourceType: "Bundle",
+                type: "searchset",
+                total: filteredEntry.length,
+                entry: filteredEntry,
+                meta: originalBundle.meta,
+                link: originalBundle.link
+            };
+
+            return NextResponse.json(patientBundle);
+        }
+        else{
+            const response = await fetch(`${apiUrl}/fhir/Patient?${field}=${term}`, {
+                headers: {
+                    Authorization: apiKey
+                }
+            });
+            const patients:FhirItem<PatientResource> = await response.json()
+            return NextResponse.json(patients)
+        }
     }else{
         const response = await fetch(`${apiUrl}/fhir/Patient`, {
             headers: {
@@ -23,7 +71,6 @@ export async function GET(request: Request) {
             }
         });
         const patients:FhirItem<PatientResource> = await response.json()
-        console.log(patients)
         return NextResponse.json(patients)
     }
 }

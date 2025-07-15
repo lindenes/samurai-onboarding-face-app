@@ -126,7 +126,6 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
     );
 
     const renderedConditionRows = (index: number, resource: ConditionResource) => {
-        console.log(resource)
         return (
             <TableRow key={`condition-${index}`}>
                 <TableCell>
@@ -172,8 +171,9 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                 {patient.identifier?.map((id, index) => (
                                     <ListItem key={index} sx={{ py: 0 }}>
                                         <ListItemText
-                                            primary={id.type?.text || 'Identifiers'}
+                                            primary={id.type?.text || 'ID'}
                                             secondary={id.value}
+                                            defaultValue={'-'}
                                             primaryTypographyProps={{ variant: 'body2' }}
                                         />
                                     </ListItem>
@@ -189,6 +189,7 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                         <ListItemText
                                             primary={`${contact.system} (${contact.use})`}
                                             secondary={contact.value}
+                                            defaultValue={'-'}
                                             primaryTypographyProps={{ variant: 'body2' }}
                                         />
                                     </ListItem>
@@ -204,6 +205,7 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                         <ListItemText
                                             primary={addr.line?.join(', ')}
                                             secondary={`${addr.city}, ${addr.state}, ${addr.postalCode}`}
+                                            defaultValue={'-'}
                                             primaryTypographyProps={{ variant: 'body2' }}
                                         />
                                     </ListItem>
