@@ -63,3 +63,19 @@ export interface IdentifierType{
 export interface SearchMode{
     mode:string
 }
+
+export interface FHIRParameters {
+    resourceType: "Parameters";
+    parameter: Array<{
+        name: string;
+        part: Array<{
+            name: string;
+            valueCode?: string;
+            valueString?: string;
+            valueDate?: string;
+            valueBoolean?: boolean;
+            valueInteger?: number;
+            valueDecimal?: number;
+        }>;
+    }>;
+}

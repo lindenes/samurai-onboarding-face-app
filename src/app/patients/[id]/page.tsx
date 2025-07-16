@@ -11,6 +11,7 @@ import {
     TableRow,
     Paper,
     List,
+    IconButton,
     ListItem,
     ListItemText,
     Chip,
@@ -20,17 +21,32 @@ import {
     Box,
     TableFooter,
     TablePagination,
-    Avatar
+    Avatar, TextField,
+    Tooltip
 } from "@mui/material";
 import React, {useEffect, useState} from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/store';
-import { Email, Phone, Home, Person, Cake, Transgender, Badge } from '@mui/icons-material';
+import {
+    Email,
+    Phone,
+    Home,
+    Person,
+    Cake,
+    Transgender,
+    Badge,
+    Edit,
+    Add,
+    Remove,
+    Close,
+    Check
+} from '@mui/icons-material';
 import {FhirItem} from "@/shared/shared-interface";
 import {ObservationResource} from "@/shared/observation-interface";
 import {ConditionResource} from "@/shared/condition-interface";
 import {fetchConditions} from "@/store/conditionSlice";
 import {fetchEncounter} from "@/store/encounterSlice";
 import {EncounterResource} from "@/shared/encounter-interface";
+import {string} from "prop-types";
 
 export default function PatientPage({ params }: { params: Promise<{ id: string }> })  {
     const router = useRouter();
@@ -184,6 +200,77 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
         );
     };
 
+    const [editingField, setEditingField] = useState<string | null>(null);
+    const [editedValues, setEditedValues] = useState<{
+        givenNames: string[];
+        familyName: string;
+        birthDate: string;
+        gender: string;
+    }>({
+        givenNames: patient.name[0]?.given || [],
+        familyName: patient.name[0]?.family || '',
+        birthDate: patient.birthDate || '',
+        gender: patient.gender || ''
+    });
+
+    const handleEditStart = (field: string) => {
+        setEditingField(field);
+    };
+
+    const handleEditCancel = () => {
+        setEditingField(null);
+    };
+
+    const handleEditSave = async () => {
+        try {
+            const updatePayload: { id:string, birthDate?: string } = {id: patient.id};
+            if (editedValues.birthDate != patient.birthDate) {
+                updatePayload.birthDate = editedValues.birthDate;
+            }
+            // const updatePayload = {
+            //     id: patient.id,
+            //     name: [{
+            //         ...patient.name[0], // сохраняем существующие поля
+            //         given: editedValues.givenNames,
+            //         family: editedValues.familyName
+            //     }],
+            //     birthDate: editedValues.birthDate,
+            //     gender: editedValues.gender
+            // };
+
+            const response = await fetch('/patients', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatePayload)
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update patient');
+            }
+
+            const updatedPatient = await response.json();
+            // Обновите состояние пациента, если нужно
+            console.log('Patient updated:', updatedPatient);
+            setEditingField(null);
+        } catch (error) {
+            console.error('Error updating patient:', error);
+        }
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
+        const { name, value } = e.target;
+
+        if (name === 'givenName' && typeof index === 'number') {
+            const newGivenNames = [...editedValues.givenNames];
+            newGivenNames[index] = value;
+            setEditedValues({...editedValues, givenNames: newGivenNames});
+        } else {
+            setEditedValues({...editedValues, [name]: value});
+        }
+    };
+
     return (
         <Container maxWidth="xl">
             <Box component="main" sx={{ py: 4 }}>
@@ -196,17 +283,178 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                 </Button>
 
                 <Grid container spacing={3}>
-                    <Grid>
+                    {/* Левая колонка - информация о пациенте */}
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Paper sx={{ p: 2, height: '100%' }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
-                                <Avatar sx={{ width: 80, height: 80, mb: 2 }}>
-                                    <Person fontSize="large" />
+                            {/* Блок с именем и демографией (с редактированием) */}
+                            <Box sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                mb: 3,
+                                textAlign: 'center',
+                                position: 'relative'
+                            }}>
+                                <Avatar sx={{
+                                    width: 80,
+                                    height: 80,
+                                    mb: 2,
+                                    fontSize: '2rem',
+                                    bgcolor: 'primary.main'
+                                }}>
+                                    {editedValues.givenNames[0]?.charAt(0) || ''}
+                                    {editedValues.familyName?.charAt(0) || ''}
                                 </Avatar>
-                                <Typography variant="h5" align="center">
-                                    {patient.name[0].family} {patient.name[0].given.join(' ')}
-                                </Typography>
+
+                                <IconButton
+                                    sx={{ position: 'absolute', top: 0, right: 0 }}
+                                    onClick={() => handleEditStart('names')}
+                                >
+                                    <Edit fontSize="small" />
+                                </IconButton>
+
+                                {editingField === 'names' ? (
+                                    <Box sx={{ width: '100%', mb: 2 }}>
+                                        {editedValues.givenNames.map((name, index) => (
+                                            <TextField
+                                                key={index}
+                                                label={`Given Name ${index + 1}`}
+                                                variant="outlined"
+                                                size="small"
+                                                fullWidth
+                                                sx={{ mb: 1 }}
+                                                name="givenName"
+                                                value={name}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e, index)}
+                                            />
+                                        ))}
+                                        <TextField
+                                            label="Family Name"
+                                            variant="outlined"
+                                            size="small"
+                                            fullWidth
+                                            sx={{ mb: 1 }}
+                                            name="familyName"
+                                            value={editedValues.familyName}
+                                            onChange={handleChange}
+                                        />
+                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                                            <IconButton onClick={handleEditCancel}>
+                                                <Close />
+                                            </IconButton>
+                                            <IconButton onClick={handleEditSave} color="primary">
+                                                <Check />
+                                            </IconButton>
+                                        </Box>
+                                    </Box>
+                                ) : (
+                                    <Typography variant="h5" gutterBottom>
+                                        {editedValues.givenNames.join(' ')} {editedValues.familyName}
+                                    </Typography>
+                                )}
+
+                                <Box sx={{
+                                    display: 'flex',
+                                    gap: 2,
+                                    flexWrap: 'wrap',
+                                    justifyContent: 'center',
+                                    width: '100%',
+                                    mt: 1
+                                }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                                        <Cake color="action" sx={{ mr: 1 }} />
+                                        {editingField === 'birthDate' ? (
+                                            <>
+                                                <TextField
+                                                    type="date"
+                                                    variant="standard"
+                                                    size="small"
+                                                    name="birthDate"
+                                                    value={editedValues.birthDate}
+                                                    onChange={handleChange}
+                                                    InputLabelProps={{
+                                                        shrink: true,
+                                                    }}
+                                                />
+                                                <Box sx={{ display: 'flex', ml: 1 }}>
+                                                    <IconButton size="small" onClick={handleEditSave}>
+                                                        <Check fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton size="small" onClick={handleEditCancel}>
+                                                        <Close fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Typography variant="body1">
+                                                    {editedValues.birthDate || 'Not specified'}
+                                                </Typography>
+                                                <Tooltip title="Edit birth date">
+                                                    <IconButton
+                                                        size="small"
+                                                        sx={{ ml: 1 }}
+                                                        onClick={() => handleEditStart('birthDate')}
+                                                    >
+                                                        <Edit fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </>
+                                        )}
+                                    </Box>
+
+                                    <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                                        <Transgender color="action" sx={{ mr: 1 }} />
+                                        {editingField === 'gender' ? (
+                                            <>
+                                                <TextField
+                                                    select
+                                                    variant="standard"
+                                                    size="small"
+                                                    name="gender"
+                                                    value={editedValues.gender}
+                                                    onChange={handleChange}
+                                                    SelectProps={{
+                                                        native: true,
+                                                    }}
+                                                >
+                                                    <option value="male">Male</option>
+                                                    <option value="female">Female</option>
+                                                    <option value="other">Other</option>
+                                                    <option value="unknown">Unknown</option>
+                                                </TextField>
+                                                <Box sx={{ display: 'flex', ml: 1 }}>
+                                                    <IconButton size="small" onClick={handleEditSave}>
+                                                        <Check fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton size="small" onClick={handleEditCancel}>
+                                                        <Close fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Typography variant="body1">
+                                                    {editedValues.gender ?
+                                                        editedValues.gender.charAt(0).toUpperCase() + editedValues.gender.slice(1) :
+                                                        'Not specified'}
+                                                </Typography>
+                                                <Tooltip title="Edit gender">
+                                                    <IconButton
+                                                        size="small"
+                                                        sx={{ ml: 1 }}
+                                                        onClick={() => handleEditStart('gender')}
+                                                    >
+                                                        <Edit fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </>
+                                        )}
+                                    </Box>
+                                </Box>
                             </Box>
 
+                            {/* Остальные поля (без редактирования) */}
                             <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
                                 <Badge sx={{ mr: 1 }} /> Identifiers
                             </Typography>
@@ -216,7 +464,6 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                         <ListItemText
                                             primary={id.type?.text || 'ID'}
                                             secondary={id.value}
-                                            defaultValue={'-'}
                                             primaryTypographyProps={{ variant: 'body2' }}
                                         />
                                     </ListItem>
@@ -232,7 +479,6 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                         <ListItemText
                                             primary={`${contact.system} (${contact.use})`}
                                             secondary={contact.value}
-                                            defaultValue={'-'}
                                             primaryTypographyProps={{ variant: 'body2' }}
                                         />
                                     </ListItem>
@@ -248,36 +494,16 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                         <ListItemText
                                             primary={addr.line?.join(', ')}
                                             secondary={`${addr.city}, ${addr.state}, ${addr.postalCode}`}
-                                            defaultValue={'-'}
                                             primaryTypographyProps={{ variant: 'body2' }}
                                         />
                                     </ListItem>
                                 ))}
                             </List>
-
-                            <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
-                                <Transgender sx={{ mr: 1 }} /> demography
-                            </Typography>
-                            <List dense>
-                                <ListItem sx={{ py: 0 }}>
-                                    <ListItemText
-                                        primary="Gender"
-                                        secondary={patient.gender || 'Не указан'}
-                                        primaryTypographyProps={{ variant: 'body2' }}
-                                    />
-                                </ListItem>
-                                <ListItem sx={{ py: 0 }}>
-                                    <ListItemText
-                                        primary="Birthdate"
-                                        secondary={patient.birthDate || 'Не указана'}
-                                        primaryTypographyProps={{ variant: 'body2' }}
-                                    />
-                                </ListItem>
-                            </List>
                         </Paper>
                     </Grid>
 
-                    <Grid>
+                    {/* Правая колонка - таблицы с данными */}
+                    <Grid size={{ xs: 12, md: 8 }}>
                         <Paper sx={{ p: 2, mb: 3 }}>
                             <Typography variant="h6" gutterBottom>Observations</Typography>
                             <TableContainer>
@@ -316,6 +542,7 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                 </Table>
                             </TableContainer>
                         </Paper>
+
                         <Paper sx={{ p: 2, mb: 3 }}>
                             <Typography variant="h6" gutterBottom>Conditions</Typography>
                             <TableContainer>
@@ -356,6 +583,7 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                 </Table>
                             </TableContainer>
                         </Paper>
+
                         <Paper sx={{ p: 2, mb: 3 }}>
                             <Typography variant="h6" gutterBottom>Encounters</Typography>
                             <TableContainer>
@@ -397,7 +625,6 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                 </Table>
                             </TableContainer>
                         </Paper>
-
                     </Grid>
                 </Grid>
             </Box>

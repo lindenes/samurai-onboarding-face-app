@@ -29,7 +29,7 @@ export interface PatientResource{
     name:Array<Name>
     id:string
     birthDate:string
-    gender:String
+    gender:string
     telecom:Array<Telecom>
     identifier:Array<Identifier>
 }
