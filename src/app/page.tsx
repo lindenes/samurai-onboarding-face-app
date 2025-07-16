@@ -104,14 +104,17 @@ export default function Home() {
         ?.sort((a, b) => new Date(b.resource.issued).getTime() - new Date(a.resource.issued).getTime())[0]
         ?.resource.valueQuantity.value;
 
+    const nameArr = patient.resource.name || [];
+    const lastName = nameArr.length > 0 ? nameArr[nameArr.length - 1] : { family: '', given: [] };
+
     return (
         <TableRow key={patientId}
                   hover
                   onClick={() => router.push(`/patients/${patient.resource.id}`)}
                   sx={{ cursor: 'pointer' }}
         >
-          <TableCell>{patient.resource.name[0].family}</TableCell>
-          <TableCell>{patient.resource.name[0].given.join(", ")}</TableCell>
+          <TableCell>{lastName.family}</TableCell>
+          <TableCell>{lastName.given?.join(", ")}</TableCell>
           <TableCell align="right">{patient.resource.birthDate}</TableCell>
           <TableCell align="right">{patient.resource.telecom?.[0]?.value || "—"}</TableCell>
           <TableCell align="right">{latestWeight || "—"}</TableCell>

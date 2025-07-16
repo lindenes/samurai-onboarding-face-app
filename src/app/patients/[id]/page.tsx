@@ -27,6 +27,7 @@ import {
 } from "@mui/material";
 import React, {useEffect, useState} from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/store';
+import { updatePatient } from '@/store/patientSlice';
 import {
     Email,
     Phone,
@@ -208,18 +209,29 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
         );
     };
 
+    const nameArr = patient.name || [];
+    const lastName = nameArr.length > 0 ? { ...nameArr[nameArr.length - 1], prefix: nameArr[nameArr.length - 1].prefix || [] } : { family: '', given: [], prefix: [] };
     const [editingField, setEditingField] = useState<string | null>(null);
     const [editedValues, setEditedValues] = useState<{
         givenNames: string[];
         familyName: string;
         birthDate: string;
         gender: string;
+        telecom: { system: string; use: string; value: string }[];
     }>({
-        givenNames: patient.name[0]?.given || [],
-        familyName: patient.name[0]?.family || '',
+        givenNames: lastName.given || [],
+        familyName: lastName.family || '',
         birthDate: patient.birthDate || '',
-        gender: patient.gender || ''
+        gender: patient.gender || '',
+        telecom: (patient.telecom || []).map((t: any) => ({
+            system: String(t.system),
+            use: String(t.use),
+            value: String(t.value)
+        }))
     });
+
+    const [newTelecom, setNewTelecom] = useState<{ system: string; use: string; value: string }>({ system: '', use: '', value: '' });
+    const [addingTelecom, setAddingTelecom] = useState(false);
 
     const handleEditStart = (field: string) => {
         setEditingField(field);
@@ -229,32 +241,61 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
         setEditingField(null);
     };
 
+    const handleAddTelecomClick = () => {
+        setAddingTelecom(true);
+        setNewTelecom({ system: '', use: '', value: '' });
+    };
+    const handleNewTelecomChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, field: string) => {
+        setNewTelecom({ ...newTelecom, [field]: e.target.value });
+    };
+    const handleCancelAddTelecom = () => {
+        setAddingTelecom(false);
+        setNewTelecom({ system: '', use: '', value: '' });
+    };
+
+    const handleRemoveTelecom = (index: number) => {
+        const newTelecom = [...editedValues.telecom];
+        newTelecom.splice(index, 1);
+        setEditedValues({ ...editedValues, telecom: newTelecom });
+    };
+
     const handleEditSave = async () => {
         try {
             const updatePayload: {
-                id:string,
+                id: string,
                 birthDate?: string,
-                gender?: string
-            } = {id: patient.id};
-            if (editedValues.birthDate != patient.birthDate) {
+                gender?: string,
+                newTelecom?: { system: string; use: string; value: string },
+                newName?: { family: string; given: string[] }
+            } = { id: patient.id };
+            let updatedNameArr = null;
+            if (editingField === 'names' && (
+                editedValues.familyName !== lastName.family ||
+                editedValues.givenNames[0] !== lastName.given?.[0]
+            )) {
+                updatePayload.newName = {
+                    family: editedValues.familyName,
+                    given: [editedValues.givenNames[0] || '']
+                };
+                // Prepare new name array for Redux update
+                updatedNameArr = [...(patient.name || [])];
+                updatedNameArr[updatedNameArr.length - 1] = {
+                    use: 'official',
+                    family: editedValues.familyName,
+                    given: [editedValues.givenNames[0] || ''],
+                    prefix: lastName.prefix || []
+                };
+            }
+            if (editingField === 'birthDate' && editedValues.birthDate !== patient.birthDate) {
                 updatePayload.birthDate = editedValues.birthDate;
             }
-            console.log(editedValues.gender)
-            console.log(patient.gender)
-            if(editedValues.gender != patient.gender){
-                updatePayload.gender = editedValues.gender
+            if (editingField === 'gender' && editedValues.gender !== patient.gender) {
+                updatePayload.gender = editedValues.gender;
             }
-            // const updatePayload = {
-            //     id: patient.id,
-            //     name: [{
-            //         ...patient.name[0], // сохраняем существующие поля
-            //         given: editedValues.givenNames,
-            //         family: editedValues.familyName
-            //     }],
-            //     birthDate: editedValues.birthDate,
-            //     gender: editedValues.gender
-            // };
-
+            if (editingField === 'telecom' && addingTelecom && newTelecom.system && newTelecom.use && newTelecom.value) {
+                updatePayload.newTelecom = newTelecom;
+            }
+            console.log(updatePayload)
             const response = await fetch('/patients', {
                 method: 'PATCH',
                 headers: {
@@ -262,29 +303,37 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                 },
                 body: JSON.stringify(updatePayload)
             });
-
             if (!response.ok) {
                 throw new Error('Failed to update patient');
             }
-
-            const updatedPatient = await response.json();
-            // Обновите состояние пациента, если нужно
-            console.log('Patient updated:', updatedPatient);
+            // Update Redux state for name if changed
+            if (updatedNameArr) {
+                dispatch(updatePatient({ id: patient.id, name: updatedNameArr }));
+            }
             setEditingField(null);
+            setAddingTelecom(false);
+            setNewTelecom({ system: '', use: '', value: '' });
         } catch (error) {
             console.error('Error updating patient:', error);
         }
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
+    const handleChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+        index?: number,
+        telecomField?: string
+    ) => {
         const { name, value } = e.target;
-
         if (name === 'givenName' && typeof index === 'number') {
             const newGivenNames = [...editedValues.givenNames];
             newGivenNames[index] = value;
-            setEditedValues({...editedValues, givenNames: newGivenNames});
+            setEditedValues({ ...editedValues, givenNames: newGivenNames });
+        } else if (name === 'telecom' && typeof index === 'number' && telecomField) {
+            const newTelecom = [...editedValues.telecom];
+            newTelecom[index] = { ...newTelecom[index], [telecomField]: value };
+            setEditedValues({ ...editedValues, telecom: newTelecom });
         } else {
-            setEditedValues({...editedValues, [name]: value});
+            setEditedValues({ ...editedValues, [name]: value });
         }
     };
 
@@ -319,8 +368,8 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                     fontSize: '2rem',
                                     bgcolor: 'primary.main'
                                 }}>
-                                    {editedValues.givenNames[0]?.charAt(0) || ''}
-                                    {editedValues.familyName?.charAt(0) || ''}
+                                    {lastName.given?.[0]?.charAt(0) || ''}
+                                    {lastName.family?.charAt(0) || ''}
                                 </Avatar>
 
                                 <IconButton
@@ -332,19 +381,16 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
 
                                 {editingField === 'names' ? (
                                     <Box sx={{ width: '100%', mb: 2 }}>
-                                        {editedValues.givenNames.map((name, index) => (
-                                            <TextField
-                                                key={index}
-                                                label={`Given Name ${index + 1}`}
-                                                variant="outlined"
-                                                size="small"
-                                                fullWidth
-                                                sx={{ mb: 1 }}
-                                                name="givenName"
-                                                value={name}
-                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e, index)}
-                                            />
-                                        ))}
+                                        <TextField
+                                            label="Given Name"
+                                            variant="outlined"
+                                            size="small"
+                                            fullWidth
+                                            sx={{ mb: 1 }}
+                                            name="givenName"
+                                            value={editedValues.givenNames[0] || ''}
+                                            onChange={e => setEditedValues({ ...editedValues, givenNames: [e.target.value] })}
+                                        />
                                         <TextField
                                             label="Family Name"
                                             variant="outlined"
@@ -353,7 +399,7 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                             sx={{ mb: 1 }}
                                             name="familyName"
                                             value={editedValues.familyName}
-                                            onChange={handleChange}
+                                            onChange={e => setEditedValues({ ...editedValues, familyName: e.target.value })}
                                         />
                                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                                             <IconButton onClick={handleEditCancel}>
@@ -366,7 +412,7 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                     </Box>
                                 ) : (
                                     <Typography variant="h5" gutterBottom>
-                                        {editedValues.givenNames.join(' ')} {editedValues.familyName}
+                                        {lastName.given?.join(' ')} {lastName.family}
                                     </Typography>
                                 )}
 
@@ -469,6 +515,46 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                         )}
                                     </Box>
                                 </Box>
+
+                                {/* Telecom editing UI */}
+                                {editingField === 'telecom' ? (
+                                    <Box sx={{ width: '100%', mb: 2 }}>
+                                        <Box sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
+                                            <TextField
+                                                label="System"
+                                                variant="outlined"
+                                                size="small"
+                                                value={newTelecom.system}
+                                                onChange={e => handleNewTelecomChange(e, 'system')}
+                                            />
+                                            <TextField
+                                                label="Use"
+                                                variant="outlined"
+                                                size="small"
+                                                value={newTelecom.use}
+                                                onChange={e => handleNewTelecomChange(e, 'use')}
+                                            />
+                                            <TextField
+                                                label="Value"
+                                                variant="outlined"
+                                                size="small"
+                                                value={newTelecom.value}
+                                                onChange={e => handleNewTelecomChange(e, 'value')}
+                                            />
+                                            <IconButton onClick={handleCancelAddTelecom} size="small" color="error">
+                                                <Close />
+                                            </IconButton>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
+                                            <IconButton onClick={handleEditCancel}>
+                                                <Close />
+                                            </IconButton>
+                                            <IconButton onClick={handleEditSave} color="primary">
+                                                <Check />
+                                            </IconButton>
+                                        </Box>
+                                    </Box>
+                                ) : null}
                             </Box>
 
                             {/* Остальные поля (без редактирования) */}
@@ -489,20 +575,23 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
 
                             <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
                                 <Phone sx={{ mr: 1 }} /> Contacts
+                                <Button size="small" variant="outlined" sx={{ ml: 2 }} onClick={() => { setEditingField('telecom'); setAddingTelecom(true); setNewTelecom({ system: '', use: '', value: '' }); }}>
+                                    Add telecom
+                                </Button>
                                 <Button size="small" variant="outlined" sx={{ ml: 2 }} onClick={handleOpenTelecomDialog}>
-                                    Show telecom details
+                                    Show all telecoms
                                 </Button>
                             </Typography>
                             <List dense>
-                                {patient.telecom?.map((contact, index) => (
-                                    <ListItem key={index} sx={{ py: 0 }}>
+                                {patient.telecom && patient.telecom.length > 0 ? (
+                                    <ListItem sx={{ py: 0 }}>
                                         <ListItemText
-                                            primary={`${contact.system} (${contact.use})`}
-                                            secondary={contact.value}
+                                            primary={`${patient.telecom[patient.telecom.length - 1].system} (${patient.telecom[patient.telecom.length - 1].use})`}
+                                            secondary={patient.telecom[patient.telecom.length - 1].value}
                                             primaryTypographyProps={{ variant: 'body2' }}
                                         />
                                     </ListItem>
-                                ))}
+                                ) : null}
                             </List>
                             <Dialog open={openTelecomDialog} onClose={handleCloseTelecomDialog} maxWidth="sm" fullWidth>
                                 <DialogTitle>Telecom Details</DialogTitle>
@@ -522,7 +611,7 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                                         <TableCell colSpan={3} align="center">No telecom data</TableCell>
                                                     </TableRow>
                                                 )}
-                                                {patient.telecom?.map((tel: any, tIdx: number) => (
+                                                {patient.telecom && patient.telecom.length > 0 && patient.telecom.map((tel: any, tIdx: number) => (
                                                     <TableRow key={tIdx}>
                                                         <TableCell>{tel.system}</TableCell>
                                                         <TableCell>{tel.use}</TableCell>

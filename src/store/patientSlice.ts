@@ -47,6 +47,15 @@ const patientSlice = createSlice({
         clearSearch: (state) => {
             state.searchParams.term = '';
         },
+        updatePatient: (state, action) => {
+            const { id, name } = action.payload;
+            if (state.data && state.data.entry) {
+                const patientEntry = state.data.entry.find(e => e.resource.id === id);
+                if (patientEntry) {
+                    if (name) patientEntry.resource.name = name;
+                }
+            }
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -65,5 +74,5 @@ const patientSlice = createSlice({
     },
 });
 
-export const { setSearchField, setSearchTerm, clearSearch } = patientSlice.actions;
+export const { setSearchField, setSearchTerm, clearSearch, updatePatient } = patientSlice.actions;
 export default patientSlice.reducer;

@@ -136,6 +136,50 @@ export async function PATCH(request: Request){
             }
         )
     }
+    console.log(patientData.tolecom)
+    if(patientData.newTelecom && typeof patientData.newTelecom === 'object'){
+        const tel = patientData.newTelecom;
+        fhirParams.parameter.push({
+            name: "operation",
+            part: [
+                { name: "type", valueCode: "add" },
+                { name: "path", valueString: "Patient" },
+                { name: "name", valueString: "telecom" },
+                { name: "value", part: [
+                    { name: "use", valueString: tel.use },
+                    { name: "value", valueString: tel.value },
+                    { name: "system", valueString: tel.system }
+                ]}
+            ]
+        });
+    }
+    if(patientData.telecom && Array.isArray(patientData.telecom)){
+        fhirParams.parameter.push({
+            name: "operation",
+            part: [
+                { name: "type", valueCode: "replace" },
+                { name: "path", valueString: "Patient" },
+                { name: "name", valueString: "telecom" },
+                { name: "value", valueString: JSON.stringify(patientData.telecom) }
+            ]
+        });
+    }
+    if(patientData.newName && typeof patientData.newName === 'object'){
+        fhirParams.parameter.push({
+            name: "operation",
+            part: [
+                { name: "type", valueCode: "add" },
+                { name: "path", valueString: "Patient" },
+                { name: "name", valueString: "name" },
+                { name: "value", part: [
+                    { name: "use", valueString: "official" },
+                    { name: "family", valueString: patientData.newName.family },
+                    { name: "given", valueString: patientData.newName.given }
+                ]}
+            ]
+        });
+    }
+
     console.log(fhirParams)
     const response = await fetch(`${apiUrl}/fhir/Patient/${patientData.id}`, {
         method: 'PATCH',
