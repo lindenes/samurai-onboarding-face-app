@@ -22,7 +22,8 @@ import {
     TableFooter,
     TablePagination,
     Avatar, TextField,
-    Tooltip
+    Tooltip,
+    Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress
 } from "@mui/material";
 import React, {useEffect, useState} from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/store';
@@ -72,6 +73,13 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
     const observations = useAppSelector((state) => state.observations.data);
     const conditions = useAppSelector((state) => state.conditions.data);
     const encounters = useAppSelector((state) => state.encounters.data);
+
+    const [openTelecomDialog, setOpenTelecomDialog] = useState(false);
+
+    const handleOpenTelecomDialog = () => {
+        setOpenTelecomDialog(true);
+    };
+    const handleCloseTelecomDialog = () => setOpenTelecomDialog(false);
 
     if (!patient) {
         return (
@@ -223,9 +231,18 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
 
     const handleEditSave = async () => {
         try {
-            const updatePayload: { id:string, birthDate?: string } = {id: patient.id};
+            const updatePayload: {
+                id:string,
+                birthDate?: string,
+                gender?: string
+            } = {id: patient.id};
             if (editedValues.birthDate != patient.birthDate) {
                 updatePayload.birthDate = editedValues.birthDate;
+            }
+            console.log(editedValues.gender)
+            console.log(patient.gender)
+            if(editedValues.gender != patient.gender){
+                updatePayload.gender = editedValues.gender
             }
             // const updatePayload = {
             //     id: patient.id,
@@ -472,6 +489,9 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
 
                             <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
                                 <Phone sx={{ mr: 1 }} /> Contacts
+                                <Button size="small" variant="outlined" sx={{ ml: 2 }} onClick={handleOpenTelecomDialog}>
+                                    Show telecom details
+                                </Button>
                             </Typography>
                             <List dense>
                                 {patient.telecom?.map((contact, index) => (
@@ -484,6 +504,39 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                                     </ListItem>
                                 ))}
                             </List>
+                            <Dialog open={openTelecomDialog} onClose={handleCloseTelecomDialog} maxWidth="sm" fullWidth>
+                                <DialogTitle>Telecom Details</DialogTitle>
+                                <DialogContent>
+                                    <TableContainer component={Paper}>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell>System</TableCell>
+                                                    <TableCell>Use</TableCell>
+                                                    <TableCell>Value</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {(!patient.telecom || patient.telecom.length === 0) && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={3} align="center">No telecom data</TableCell>
+                                                    </TableRow>
+                                                )}
+                                                {patient.telecom?.map((tel: any, tIdx: number) => (
+                                                    <TableRow key={tIdx}>
+                                                        <TableCell>{tel.system}</TableCell>
+                                                        <TableCell>{tel.use}</TableCell>
+                                                        <TableCell>{tel.value}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </DialogContent>
+                                <DialogActions>
+                                    <Button onClick={handleCloseTelecomDialog}>Close</Button>
+                                </DialogActions>
+                            </Dialog>
 
                             <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
                                 <Home sx={{ mr: 1 }} /> Address

@@ -111,6 +111,31 @@ export async function PATCH(request: Request){
             }
         )
     }
+    if(patientData.gender){
+        fhirParams.parameter.push(
+            {
+                name: "operation",
+                part: [
+                    {
+                        name: "type",
+                        valueCode: "add"
+                    },
+                    {
+                        name: "path",
+                        valueString: "Patient"
+                    },
+                    {
+                        name: "name",
+                        valueString: "gender"
+                    },
+                    {
+                        name: "value",
+                        valueDate: patientData.gender
+                    }
+                ]
+            }
+        )
+    }
     console.log(fhirParams)
     const response = await fetch(`${apiUrl}/fhir/Patient/${patientData.id}`, {
         method: 'PATCH',
