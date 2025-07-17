@@ -146,7 +146,7 @@ export default function Home() {
             </TextField>
 
             <TextField
-                label="Поиск"
+                label="Search"
                 variant="outlined"
                 fullWidth
                 value={searchParams.term}
