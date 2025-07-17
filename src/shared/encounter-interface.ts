@@ -1,11 +1,11 @@
 import {IdentifierType, Link, Meta, SearchMode, Subject} from "@/shared/shared-interface";
 
 interface ServiceProvider{
-    display:string
+    display?:string
     reference:string
 }
 interface Period{
-    end:string
+    end?:string
     start:string
 }
 interface Individual{

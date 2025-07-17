@@ -25,3 +25,19 @@ export async function GET(request: Request) {
         return NextResponse.json(observations)
     }
 }
+
+export async function POST(request: Request) {
+    const apiUrl = process.env.AIDBOX_URL!;
+    const apiKey = process.env.AIDBOX_AUTH!;
+    const encounterData = await request.json();
+    const response = await fetch(`${apiUrl}/fhir/Encounter`, {
+        method: 'POST',
+        headers: {
+            Authorization: apiKey,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(encounterData)
+    });
+    const createdEncounter = await response.json();
+    return NextResponse.json(createdEncounter);
+}

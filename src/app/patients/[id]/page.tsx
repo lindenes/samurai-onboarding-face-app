@@ -82,6 +82,56 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
     };
     const handleCloseTelecomDialog = () => setOpenTelecomDialog(false);
 
+    const [openEncounterDialog, setOpenEncounterDialog] = useState(false);
+    const [encounterForm, setEncounterForm] = useState({
+        status: 'planned',
+        classCode: 'AMB',
+        classDisplay: 'ambulatory',
+        periodStart: '',
+        serviceProviderDisplay: '',
+        serviceProviderReference: ''
+    });
+    const [creatingEncounter, setCreatingEncounter] = useState(false);
+
+    const handleOpenEncounterDialog = () => setOpenEncounterDialog(true);
+    const handleCloseEncounterDialog = () => setOpenEncounterDialog(false);
+    const handleEncounterFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEncounterForm({ ...encounterForm, [e.target.name]: e.target.value });
+    };
+    const handleCreateEncounter = async () => {
+        if (!patient) return;
+        setCreatingEncounter(true);
+        const body = {
+            resourceType: 'Encounter',
+            status: encounterForm.status,
+            class: {
+                system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
+                code: encounterForm.classCode,
+                display: encounterForm.classDisplay
+            },
+            subject: {
+                reference: `Patient/${patient.id}`
+            },
+            period: {
+                start: encounterForm.periodStart
+            },
+            serviceProvider: {
+                display: encounterForm.serviceProviderDisplay,
+                reference: encounterForm.serviceProviderReference
+            }
+        };
+        const res = await fetch('/encounters', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        setCreatingEncounter(false);
+        if (res.ok) {
+            handleCloseEncounterDialog();
+            dispatch(fetchEncounter({patientID: patient.id}));
+        }
+    };
+
     if (!patient) {
         return (
             <Container maxWidth="lg">
@@ -109,6 +159,13 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
     const patientEncounters = encounters?.entry?.filter(
         (cond) => cond.resource.subject?.reference === `Patient/${patient?.id}`
     ) || [];
+
+    // Sort encounters by meta.lastUpdated descending
+    const sortedPatientEncounters = [...patientEncounters].sort((a, b) => {
+        const dateA = new Date(a.resource.meta?.lastUpdated || 0).getTime();
+        const dateB = new Date(b.resource.meta?.lastUpdated || 0).getTime();
+        return dateB - dateA;
+    });
 
     const handleChangePage = (event: unknown, newPage: number) => {
         setPage(newPage);
@@ -169,7 +226,8 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
         conditionsPage * conditionsRowsPerPage + conditionsRowsPerPage
     );
 
-    const currentEncounters = patientEncounters.slice(
+    // Use sortedPatientEncounters instead of patientEncounters for pagination and rendering
+    const currentEncounters = sortedPatientEncounters.slice(
         encountersPage * encountersRowsPerPage,
         encountersPage * encountersRowsPerPage + encountersRowsPerPage
     );
@@ -200,10 +258,10 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                     {resource.status}
                 </TableCell>
                 <TableCell>
-                    {resource.serviceProvider.display}
+                    {resource.serviceProvider?.display || "-"}
                 </TableCell>
                 <TableCell>
-                    {resource.period.start + " - " + resource.period.end}
+                    {resource.period.start + " - " + (resource.period.end || "")}
                 </TableCell>
             </TableRow>
         );
@@ -727,6 +785,9 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                         </Paper>
 
                         <Paper sx={{ p: 2, mb: 3 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                                <Button variant="contained" onClick={handleOpenEncounterDialog} disabled={!patient}>Create Encounter</Button>
+                            </Box>
                             <Typography variant="h6" gutterBottom>Encounters</Typography>
                             <TableContainer>
                                 <Table size="small">
@@ -770,6 +831,62 @@ export default function PatientPage({ params }: { params: Promise<{ id: string }
                     </Grid>
                 </Grid>
             </Box>
+            <Dialog open={openEncounterDialog} onClose={handleCloseEncounterDialog} maxWidth="sm" fullWidth>
+                <DialogTitle>Create Encounter</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                        <TextField
+                            label="Status"
+                            name="status"
+                            value={encounterForm.status}
+                            onChange={handleEncounterFormChange}
+                            fullWidth
+                        />
+                        <TextField
+                            label="Class Code"
+                            name="classCode"
+                            value={encounterForm.classCode}
+                            onChange={handleEncounterFormChange}
+                            fullWidth
+                        />
+                        <TextField
+                            label="Class Display"
+                            name="classDisplay"
+                            value={encounterForm.classDisplay}
+                            onChange={handleEncounterFormChange}
+                            fullWidth
+                        />
+                        <TextField
+                            label="Period Start (ISO)"
+                            name="periodStart"
+                            value={encounterForm.periodStart}
+                            onChange={handleEncounterFormChange}
+                            fullWidth
+                            placeholder="2025-07-17T10:00:00Z"
+                        />
+                        <TextField
+                            label="Service Provider Display"
+                            name="serviceProviderDisplay"
+                            value={encounterForm.serviceProviderDisplay}
+                            onChange={handleEncounterFormChange}
+                            fullWidth
+                        />
+                        <TextField
+                            label="Service Provider Reference"
+                            name="serviceProviderReference"
+                            value={encounterForm.serviceProviderReference}
+                            onChange={handleEncounterFormChange}
+                            fullWidth
+                        />
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseEncounterDialog}>Cancel</Button>
+                    <Button onClick={handleCreateEncounter} variant="contained" disabled={creatingEncounter}>
+                        {creatingEncounter ? 'Creating...' : 'Create'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 }
